@@ -3,8 +3,6 @@ import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
 import LoadingSVG from "@/public/img/icons/loader.svg";
 
-// Dynamically import the AdminApp component and disable SSR
-// react-admin is a client-side library and should not be rendered on the server
 const AdminApp = dynamic(() => import("@/components/admin/App"), {
   ssr: false,
   loading: () => (

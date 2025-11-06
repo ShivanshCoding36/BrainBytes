@@ -5,37 +5,29 @@ import { db } from '@/db/drizzle'
 import {
   quests,
   userQuestProgress,
-  type Quest,
   questTypeEnum,
 } from '@/db/schema/quests'
 import { userProgress } from '@/db/schema/userProgress'
 import { eq, and, sql, inArray } from 'drizzle-orm'
 import { revalidateTag } from 'next/cache'
 
-/**
- * Fetches all quests and the user's progress for them.
- */
 export const getQuests = async (userId?: string | null) => {
   if (userId === null) return []
 
   let finalUserId: string
 
-  // 1. Determine the final, definite user ID
   if (userId) {
-    // If a userId is passed, use it
     finalUserId = userId
   } else {
-    // Otherwise, get it from auth
     const { userId: _uid } = await auth()
-    if (!_uid) return [] // Not provided and not authenticated, so return empty
+    if (!_uid) return [] 
     finalUserId = _uid
   }
 
-  // 2. Now finalUserId is guaranteed to be a string
   const data = await db.query.quests.findMany({
     with: {
       userQuestProgress: {
-        where: eq(userQuestProgress.userId, finalUserId), // This is now type-safe
+        where: eq(userQuestProgress.userId, finalUserId),
       },
     },
   })
@@ -43,10 +35,6 @@ export const getQuests = async (userId?: string | null) => {
   return data
 }
 
-/**
- * Updates quest progress for a user based on a specific type.
- * This function is the core of the quest system.
- */
 export const updateQuestProgress = async (
   userId: string,
   questType: (typeof questTypeEnum.enumValues)[number],
@@ -71,7 +59,6 @@ export const updateQuestProgress = async (
       throw new Error('User progress not found')
     }
 
-    // Get current progress for all relevant quests
     const currentQuestProgresses = await db.query.userQuestProgress.findMany({
       where: and(
         eq(userQuestProgress.userId, userId),
@@ -82,13 +69,11 @@ export const updateQuestProgress = async (
     let totalPointsReward = 0
     let totalGemsReward = 0
 
-    // Loop through each quest that could be updated
     for (const quest of questsToUpdate) {
       let progress = currentQuestProgresses.find(
         (p) => p.questId === quest.id,
       )
 
-      // If progress doesn't exist, create it
       if (!progress) {
         const [newProgress] = await db
           .insert(userQuestProgress)
@@ -102,7 +87,6 @@ export const updateQuestProgress = async (
         progress = newProgress
       }
 
-      // If quest is already completed (especially for daily/weekly), skip
       if (progress.completed) {
         continue
       }
@@ -209,9 +193,6 @@ export const checkMilestoneQuests = async (userId: string) => {
         continue
       }
 
-      // Milestone-specific logic: check against userProgress.points
-      // This assumes 'Points Collector' is the only milestone.
-      // You'd need more specific logic if milestones tracked different things.
       const currentMilestoneProgress = currentUserProgress.points
       const isComplete = currentMilestoneProgress >= quest.target
 
@@ -224,13 +205,12 @@ export const checkMilestoneQuests = async (userId: string) => {
         })
         .where(eq(userQuestProgress.id, progress.id))
 
-      if (isComplete && !progress.completed) { // Only add rewards on the transition to complete
+      if (isComplete && !progress.completed) { 
         totalPointsReward += quest.rewardPoints
         totalGemsReward += quest.rewardGems
       }
     }
 
-    // Apply rewards if any quests were completed
     if (totalPointsReward > 0 || totalGemsReward > 0) {
       await db
         .update(userProgress)
@@ -241,7 +221,6 @@ export const checkMilestoneQuests = async (userId: string) => {
         .where(eq(userProgress.userId, userId))
     }
 
-    // Revalidate caches
     revalidateTag(`get_user_progress::${userId}`)
     revalidateTag('get_user_progress')
     revalidateTag(`get_quests::${userId}`)
@@ -251,10 +230,6 @@ export const checkMilestoneQuests = async (userId: string) => {
   }
 }
 
-/**
- * Resets progress for all daily quests for all users.
- * Intended to be called by a cron job.
- */
 export const resetDailyQuests = async () => {
   try {
     const dailyQuests = await db.query.quests.findMany({
@@ -279,16 +254,12 @@ export const resetDailyQuests = async () => {
       .where(inArray(userQuestProgress.questId, dailyQuestIds))
 
     console.log(`Reset ${dailyQuestIds.length} daily quests for all users.`)
-    revalidateTag('get_quests') // Revalidate for all users
+    revalidateTag('get_quests')
   } catch (error) {
     console.error('Failed to reset daily quests:', error)
   }
 }
 
-/**
- * Resets progress for all weekly quests for all users.
- * Intended to be called by a cron job.
- */
 export const resetWeeklyQuests = async () => {
   try {
     const weeklyQuests = await db.query.quests.findMany({
@@ -313,7 +284,7 @@ export const resetWeeklyQuests = async () => {
       .where(inArray(userQuestProgress.questId, weeklyQuestIds))
 
     console.log(`Reset ${weeklyQuestIds.length} weekly quests for all users.`)
-    revalidateTag('get_quests') // Revalidate for all users
+    revalidateTag('get_quests')
   } catch (error) {
     console.error('Failed to reset weekly quests:', error)
   }

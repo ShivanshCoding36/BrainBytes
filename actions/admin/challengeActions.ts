@@ -15,11 +15,9 @@ const checkAdmin = () => {
   }
 };
 
-// Define valid column keys for sorting
 type ChallengeSortKeys = keyof typeof schema.challenges.$inferSelect;
 const validSortKeys = new Set<string>(["id", "question", "type", "lessonId", "order"]);
 
-// GET_LIST & GET_MANY_REFERENCE
 export const getChallengesList = async (params: GetListParams) => {
   checkAdmin();
   const { page, perPage } = params.pagination;
@@ -56,7 +54,6 @@ export const getChallengesList = async (params: GetListParams) => {
   return { data, total: total[0].count };
 };
 
-// GET_ONE
 export const getChallengeOne = async (id: number) => {
   checkAdmin();
   const data = await db.query.challenges.findFirst({
@@ -65,7 +62,6 @@ export const getChallengeOne = async (id: number) => {
   return { data };
 };
 
-// GET_MANY
 export const getChallengeMany = async (ids: number[]) => {
   checkAdmin();
   const data = await db.query.challenges.findMany({
@@ -74,7 +70,6 @@ export const getChallengeMany = async (ids: number[]) => {
   return { data };
 };
 
-// CREATE
 export const createChallenge = async (data: typeof schema.challenges.$inferInsert) => {
   checkAdmin();
   const [newChallenge] = await db
@@ -85,7 +80,6 @@ export const createChallenge = async (data: typeof schema.challenges.$inferInser
   return { data: newChallenge };
 };
 
-// UPDATE
 export const updateChallenge = async (id: number, data: Partial<typeof schema.challenges.$inferSelect>) => {
   checkAdmin();
   const [updatedChallenge] = await db
@@ -97,7 +91,6 @@ export const updateChallenge = async (id: number, data: Partial<typeof schema.ch
   return { data: updatedChallenge };
 };
 
-// DELETE
 export const deleteChallenge = async (id: number) => {
   checkAdmin();
   const [deletedChallenge] = await db

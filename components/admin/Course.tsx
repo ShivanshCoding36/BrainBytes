@@ -38,10 +38,6 @@ export const CourseList = () => (
 export const CourseEdit = () => (
   <Edit title={<CourseTitle />}>
     <SimpleForm>
-      {/* This was the fix: 
-        Changed <NumberField> to <TextInput>
-        The <TextInput> component accepts the "disabled" prop.
-      */}
       <TextInput source="id" disabled />
       <TextInput source="title" validate={required()} />
       <TextInput source="altCode" validate={required()} />

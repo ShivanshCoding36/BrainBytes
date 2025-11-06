@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { Trophy, Target } from 'lucide-react'
 import { QuestGrid } from '@/components/user/quests/QuestGrid'
 import { getUserProgress } from '@/db/queries/userProgress'
-// 1. Import the new getQuests action
 import { getQuests } from '@/actions/quest'
 
 export default async function Quests() {
@@ -13,7 +12,6 @@ export default async function Quests() {
     redirect('/')
   }
 
-  // 3. Fetch user progress and all quests (with user progress) concurrently
   const [userProgress, allQuests] = await Promise.all([
     getUserProgress(userId),
     getQuests(userId),
@@ -23,7 +21,6 @@ export default async function Quests() {
     redirect('/courses')
   }
 
-  // 4. Filter quests based on data from the database
   const dailyQuests = allQuests.filter((q) => q.type === 'daily')
   const weeklyQuests = allQuests.filter((q) => q.type === 'weekly')
   const milestones = allQuests.filter((q) => q.type === 'milestone')
@@ -43,7 +40,6 @@ export default async function Quests() {
         </div>
       </div>
 
-      {/* This part remains the same */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border-2 bg-card p-4 text-center">
           <p className="text-sm text-muted-foreground">Total Points</p>
@@ -65,7 +61,6 @@ export default async function Quests() {
         </div>
       </div>
 
-      {/* 5. Pass the fetched data to QuestGrid */}
       {dailyQuests.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center gap-2">

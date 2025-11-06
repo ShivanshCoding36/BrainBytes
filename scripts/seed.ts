@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
 
 import * as schema from '@/db/schema'
-import { QUESTS } from '@/config/quests' // Import QUESTS
+import { QUESTS } from '@/config/quests' 
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -12,18 +12,16 @@ const main = async () => {
   try {
     console.log('🚧 [DB]: Seeding database...')
 
-    // Clear existing data in reverse order of dependencies
     await db.delete(schema.challengeProgress)
     await db.delete(schema.challengeOptions)
     await db.delete(schema.challenges)
     await db.delete(schema.lessons)
     await db.delete(schema.units)
-    await db.delete(schema.userQuestProgress) // Add this
-    await db.delete(schema.quests) // Add this
+    await db.delete(schema.userQuestProgress)
+    await db.delete(schema.quests)
     await db.delete(schema.userProgress)
     await db.delete(schema.courses)
 
-    // Seed Courses
     await db.insert(schema.courses).values([
       {
         id: 1,
@@ -47,36 +45,34 @@ const main = async () => {
       },
     ])
 
-    // Seed Units
     await db.insert(schema.units).values([
       {
         id: 1,
         title: 'Unit 1: Arrays & Strings',
         description: 'Master fundamental data structures: arrays and strings.',
-        courseId: 1, // Python
+        courseId: 1,
         order: 1,
       },
       {
         id: 2,
         title: 'Unit 2: Linked Lists',
         description: 'Learn about linked lists and their operations.',
-        courseId: 1, // Python
+        courseId: 1,
         order: 2,
       },
       {
         id: 3,
         title: 'Unit 3: Stacks & Queues',
         description: 'Understand LIFO and FIFO data structures.',
-        courseId: 1, // Python
+        courseId: 1, 
         order: 3,
       },
     ])
 
-    // Seed Lessons
     await db.insert(schema.lessons).values([
       {
         id: 1,
-        unitId: 1, // Arrays & Strings
+        unitId: 1, 
         order: 1,
         title: 'Array Basics',
       },
@@ -88,7 +84,7 @@ const main = async () => {
       },
       {
         id: 3,
-        unitId: 1, // Arrays & Strings
+        unitId: 1,
         order: 3,
         title: 'Sliding Window',
       },
@@ -106,7 +102,7 @@ const main = async () => {
       },
       {
         id: 6,
-        unitId: 2, // Linked Lists
+        unitId: 2,
         order: 1,
         title: 'Singly Linked Lists',
       },
@@ -124,7 +120,7 @@ const main = async () => {
       },
       {
         id: 9,
-        unitId: 3, // Stacks & Queues
+        unitId: 3,
         order: 1,
         title: 'Stack Implementation',
       },
@@ -136,11 +132,10 @@ const main = async () => {
       },
     ])
 
-    // Seed Challenges
     await db.insert(schema.challenges).values([
       {
         id: 1,
-        lessonId: 1, // Array Basics
+        lessonId: 1, 
         type: 'SELECT',
         order: 1,
         question:
@@ -148,21 +143,20 @@ const main = async () => {
       },
       {
         id: 2,
-        lessonId: 1, // Array Basics
+        lessonId: 1,
         type: 'SELECT',
         order: 2,
         question: 'Which operation on an array has O(n) time complexity?',
       },
       {
         id: 3,
-        lessonId: 2, // Two Pointers
+        lessonId: 2, 
         type: 'SELECT',
         order: 1,
         question: 'What is the two-pointer technique primarily used for?',
       },
     ])
 
-    // Seed Challenge Options
     await db.insert(schema.challengeOptions).values([
       {
         id: 1,
@@ -238,11 +232,8 @@ const main = async () => {
       },
     ])
 
-    // --- Add Quests ---
     console.log('Seeding quests...')
-    // Map data from config to the new schema format
     const questsData = QUESTS.map((quest) => ({
-      // We don't provide an ID, it will be auto-generated
       title: quest.title,
       description: quest.description,
       icon: quest.icon,
@@ -253,7 +244,6 @@ const main = async () => {
     }))
 
     await db.insert(schema.quests).values(questsData)
-    // --- End Add Quests ---
 
     console.log('✅ [DB]: Seeded 100%!')
   } catch (error) {

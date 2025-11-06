@@ -8,7 +8,6 @@ import * as challengeActions from "@/actions/admin/challengeActions";
 import * as challengeOptionActions from "@/actions/admin/challengeOptionActions";
 import { GetListParams } from "@/actions/admin/types";
 
-// Map resource names to their specific action modules
 const resourceActionMap = {
   courses: courseActions,
   units: unitActions,
@@ -19,7 +18,6 @@ const resourceActionMap = {
 
 type ResourceName = keyof typeof resourceActionMap;
 
-// Helper to get the correct action module for a resource
 const getActions = (resource: string) => {
   return resourceActionMap[resource as ResourceName] as any;
 };
@@ -64,7 +62,6 @@ export const dataProvider: DataProvider = {
     return actions.update(Number(params.id), params.data);
   },
 
-  // FIX: Added the missing updateMany function
   updateMany: async (resource, params) => {
     const actions = getActions(resource);
     const results = await Promise.all(

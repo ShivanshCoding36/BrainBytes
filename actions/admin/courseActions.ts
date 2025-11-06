@@ -3,7 +3,7 @@
 import "server-only";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
+import { asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import * as schema from "@/db/schema";
 import { getIsAdmin } from "@/lib/admin";
@@ -15,11 +15,9 @@ const checkAdmin = () => {
   }
 };
 
-// Define valid column keys for sorting
 type CourseSortKeys = keyof typeof schema.courses.$inferSelect;
 const validSortKeys = new Set<string>(["id", "title", "altCode"]);
 
-// GET_LIST
 export const getCoursesList = async (params: GetListParams) => {
   checkAdmin();
   const { page, perPage } = params.pagination;
@@ -57,7 +55,6 @@ export const getCoursesList = async (params: GetListParams) => {
   return { data, total: total[0].count };
 };
 
-// GET_ONE
 export const getCourseOne = async (id: number) => {
   checkAdmin();
   const data = await db.query.courses.findFirst({
@@ -66,7 +63,6 @@ export const getCourseOne = async (id: number) => {
   return { data };
 };
 
-// GET_MANY
 export const getCourseMany = async (ids: number[]) => {
   checkAdmin();
   const data = await db.query.courses.findMany({
@@ -75,7 +71,6 @@ export const getCourseMany = async (ids: number[]) => {
   return { data };
 };
 
-// CREATE
 export const createCourse = async (data: typeof schema.courses.$inferInsert) => {
   checkAdmin();
   const [newCourse] = await db
@@ -86,7 +81,6 @@ export const createCourse = async (data: typeof schema.courses.$inferInsert) => 
   return { data: newCourse };
 };
 
-// UPDATE
 export const updateCourse = async (id: number, data: Partial<typeof schema.courses.$inferSelect>) => {
   checkAdmin();
   const [updatedCourse] = await db
@@ -98,7 +92,6 @@ export const updateCourse = async (id: number, data: Partial<typeof schema.cours
   return { data: updatedCourse };
 };
 
-// DELETE
 export const deleteCourse = async (id: number) => {
   checkAdmin();
   const [deletedCourse] = await db

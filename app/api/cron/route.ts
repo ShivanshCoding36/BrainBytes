@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { resetDailyQuests, resetWeeklyQuests } from '@/actions/quest'
 
-// This function will be triggered by Vercel Cron
 export async function GET(request: Request) {
   const headersList = headers()
   const authHeader = headersList.get('authorization')
@@ -11,7 +10,6 @@ export async function GET(request: Request) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
-  // Determine if it's time to reset weekly quests (e.g., every Monday)
   const isMonday = new Date().getDay() === 1
 
   try {

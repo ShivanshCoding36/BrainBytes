@@ -1,6 +1,5 @@
 'use client'
 
-// 1. Import the new database types
 import {
   type Quest,
   type UserQuestProgress,
@@ -16,8 +15,7 @@ type QuestCardProps = {
 }
 
 export function QuestCard({ quest }: QuestCardProps) {
-  // 2. Get progress data from the quest prop
-  const progressData = quest.userQuestProgress[0] // Get the first (and only) progress for this user
+  const progressData = quest.userQuestProgress[0] 
   const currentProgress = progressData?.currentProgress || 0
   const isCompleted = progressData?.completed || false
 
@@ -83,7 +81,6 @@ export function QuestCard({ quest }: QuestCardProps) {
         </div>
 
         <div className="flex items-center gap-3 pt-2 text-sm">
-          {/* 3. Use reward fields from quest data */}
           <span className="font-semibold text-primary">
             +{quest.rewardPoints} XP
           </span>
@@ -102,7 +99,6 @@ type QuestGridProps = {
   quests: QuestWithProgress[]
 }
 
-// 4. Simplify QuestGrid: remove userProgress prop and mock logic
 export function QuestGrid({ quests }: QuestGridProps) {
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

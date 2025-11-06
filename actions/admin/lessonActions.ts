@@ -15,11 +15,9 @@ const checkAdmin = () => {
   }
 };
 
-// Define valid column keys for sorting
 type LessonSortKeys = keyof typeof schema.lessons.$inferSelect;
 const validSortKeys = new Set<string>(["id", "title", "unitId", "order"]);
 
-// GET_LIST & GET_MANY_REFERENCE
 export const getLessonsList = async (params: GetListParams) => {
   checkAdmin();
   const { page, perPage } = params.pagination;
@@ -55,7 +53,6 @@ export const getLessonsList = async (params: GetListParams) => {
   return { data, total: total[0].count };
 };
 
-// GET_ONE
 export const getLessonOne = async (id: number) => {
   checkAdmin();
   const data = await db.query.lessons.findFirst({
@@ -64,7 +61,6 @@ export const getLessonOne = async (id: number) => {
   return { data };
 };
 
-// GET_MANY
 export const getLessonMany = async (ids: number[]) => {
   checkAdmin();
   const data = await db.query.lessons.findMany({
@@ -73,7 +69,6 @@ export const getLessonMany = async (ids: number[]) => {
   return { data };
 };
 
-// CREATE
 export const createLesson = async (data: typeof schema.lessons.$inferInsert) => {
   checkAdmin();
   const [newLesson] = await db.insert(schema.lessons).values(data).returning();
@@ -81,7 +76,6 @@ export const createLesson = async (data: typeof schema.lessons.$inferInsert) => 
   return { data: newLesson };
 };
 
-// UPDATE
 export const updateLesson = async (id: number, data: Partial<typeof schema.lessons.$inferSelect>) => {
   checkAdmin();
   const [updatedLesson] = await db
@@ -93,7 +87,6 @@ export const updateLesson = async (id: number, data: Partial<typeof schema.lesso
   return { data: updatedLesson };
 };
 
-// DELETE
 export const deleteLesson = async (id: number) => {
   checkAdmin();
   const [deletedLesson] = await db

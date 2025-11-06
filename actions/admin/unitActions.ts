@@ -15,10 +15,8 @@ const checkAdmin = () => {
   }
 };
 
-// Define valid column keys for sorting
 type UnitSortKeys = keyof typeof schema.units.$inferSelect;
 
-// Create a Set of valid keys for runtime checking
 const validSortKeys = new Set<string>([
   "id",
   "title",
@@ -27,7 +25,6 @@ const validSortKeys = new Set<string>([
   "order",
 ]);
 
-// GET_LIST & GET_MANY_REFERENCE (for filtering by courseId)
 export const getUnitsList = async (params: GetListParams) => {
   checkAdmin();
   const { page, perPage } = params.pagination;
@@ -36,17 +33,14 @@ export const getUnitsList = async (params: GetListParams) => {
 
   const offset = (page - 1) * perPage;
 
-  // FIX: Validate and type the sort field
-  let typedField: UnitSortKeys = "id"; // Default to 'id'
+  let typedField: UnitSortKeys = "id";
 
-  // Runtime check if the provided field is valid
   if (validSortKeys.has(field)) {
     typedField = field as UnitSortKeys;
   } else {
     console.warn(`Invalid sort field: ${field}, defaulting to 'id'`);
   }
 
-  // Now 'typedField' is guaranteed to be a valid column key
   const orderBy = order === "ASC" ? asc(schema.units[typedField]) : desc(schema.units[typedField]);
 
   const whereClauses = and(
@@ -67,7 +61,6 @@ export const getUnitsList = async (params: GetListParams) => {
   return { data, total: total[0].count };
 };
 
-// GET_ONE
 export const getUnitOne = async (id: number) => {
   checkAdmin();
   const data = await db.query.units.findFirst({
@@ -76,7 +69,6 @@ export const getUnitOne = async (id: number) => {
   return { data };
 };
 
-// GET_MANY
 export const getUnitMany = async (ids: number[]) => {
   checkAdmin();
   const data = await db.query.units.findMany({
@@ -85,7 +77,6 @@ export const getUnitMany = async (ids: number[]) => {
   return { data };
 };
 
-// CREATE
 export const createUnit = async (data: typeof schema.units.$inferInsert) => {
   checkAdmin();
   const [newUnit] = await db.insert(schema.units).values(data).returning();
@@ -93,7 +84,6 @@ export const createUnit = async (data: typeof schema.units.$inferInsert) => {
   return { data: newUnit };
 };
 
-// UPDATE
 export const updateUnit = async (id: number, data: Partial<typeof schema.units.$inferSelect>) => {
   checkAdmin();
   const [updatedUnit] = await db
@@ -105,7 +95,6 @@ export const updateUnit = async (id: number, data: Partial<typeof schema.units.$
   return { data: updatedUnit };
 };
 
-// DELETE
 export const deleteUnit = async (id: number) => {
   checkAdmin();
   const [deletedUnit] = await db

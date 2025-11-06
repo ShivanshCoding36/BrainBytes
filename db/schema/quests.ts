@@ -10,7 +10,6 @@ import {
 import { relations } from 'drizzle-orm'
 import { userProgress } from '@/db/schema/userProgress'
 
-// Define an enum for quest types, matching your config
 export const questTypeEnum = pgEnum('quest_type', [
   'daily',
   'weekly',
@@ -19,7 +18,6 @@ export const questTypeEnum = pgEnum('quest_type', [
   'milestone',
 ])
 
-// Define the quests table
 export const quests = pgTable('quests', {
   id: serial('id').primaryKey(),
   title: text('title').notNull(),
@@ -31,7 +29,6 @@ export const quests = pgTable('quests', {
   type: questTypeEnum('type').notNull(),
 })
 
-// Define the user's progress on each quest
 export const userQuestProgress = pgTable('user_quest_progress', {
   id: serial('id').primaryKey(),
   userId: text('user_id')
@@ -42,10 +39,8 @@ export const userQuestProgress = pgTable('user_quest_progress', {
     .notNull(),
   currentProgress: integer('current_progress').notNull().default(0),
   completed: boolean('completed').notNull().default(false),
-  lastCompletedAt: timestamp('last_completed_at'), // For daily/weekly reset tracking
+  lastCompletedAt: timestamp('last_completed_at'), 
 })
-
-// --- Relations ---
 
 export const questsRelations = relations(quests, ({ many }) => ({
   userQuestProgress: many(userQuestProgress),

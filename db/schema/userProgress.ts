@@ -2,7 +2,7 @@ import { relations } from 'drizzle-orm'
 import { pgTable, text, integer } from 'drizzle-orm/pg-core'
 
 import { courses } from '@/db/schema/courses'
-import { userQuestProgress } from '@/db/schema/quests' // 1. Import new schema
+import { userQuestProgress } from '@/db/schema/quests'
 
 export const userProgress = pgTable('user_progress', {
   userId: text('user_id').primaryKey(),
@@ -16,12 +16,12 @@ export const userProgress = pgTable('user_progress', {
   gems: integer('gems').notNull().default(0),
 })
 
-export const userProgressRelations = relations(userProgress, ({ one, many }) => ({ // 2. Add 'many'
+export const userProgressRelations = relations(userProgress, ({ one, many }) => ({
   activeCourse: one(courses, {
     fields: [userProgress.activeCourseId],
     references: [courses.id],
   }),
-  userQuestProgress: many(userQuestProgress), // 3. Add this relation
+  userQuestProgress: many(userQuestProgress), 
 }))
 
 export type UserProgressType = typeof userProgress.$inferSelect
