@@ -44,7 +44,7 @@ export default async function Shop() {
           <p className="text-sm text-muted-foreground">Gems</p>
           <p className="text-3xl font-bold text-secondary">💎 {userProgress.gems}</p>
         </div>
-=        <div className="sm:col-span-1">
+        <div className="sm:col-span-1">
           <WalletManager savedWalletAddress={userProgress.walletAddress || null} />
         </div>
       </div>
