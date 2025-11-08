@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useUser } from '@auth0/nextjs-auth0/client'
+import { useRouter } from 'next/navigation'
 
 const FINDING_TOAST_ID = 'competition-finding'
 const WAITING_TOAST_ID = 'competition-waiting'
@@ -16,13 +17,17 @@ const SUBMISSION_TOAST_ID = 'competition-submitting'
 
 type Props = {
   challenge: ChallengeType
+  language: string
+  initialCode: string
 }
 
-export function CompetitionRoom({ challenge }: Props) {
+export function CompetitionRoom({ challenge, language, initialCode }: Props) {
+  const router = useRouter()
   const [match, setMatch] = useState<ChallengeMatchType | null>(null)
   const [status, setStatus] = useState<'idle' | 'waiting' | 'in_progress' | 'completed'>('idle')
-  const [code, setCode] = useState(challenge.stubCodeJs || '// Start coding here')
+  const [code, setCode] = useState(initialCode)
   const [opponentCodeLength, setOpponentCodeLength] = useState(0)
+  const [opponentLanguage, setOpponentLanguage] = useState<string | null>(null)
   const [winnerId, setWinnerId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, startSubmission] = useTransition()
@@ -45,13 +50,18 @@ export function CompetitionRoom({ challenge }: Props) {
     toast.loading('Finding an opponent...', { id: FINDING_TOAST_ID })
 
     try {
-      const result: any = await findOrJoinMatch(challenge.id)
+      const result: any = await findOrJoinMatch(challenge.id, language) 
       setMatch(result.match)
 
       if (result.status === 'joined') {
         dismissStatusToasts()
         setStatus('in_progress')
         toast.success('Opponent found! The match has started.')
+        // @ts-ignore
+        if (result.match.playerOneLanguage) {
+          // @ts-ignore
+          setOpponentLanguage(result.match.playerOneLanguage)
+        }
       } else {
         setStatus('waiting')
         toast.info('Waiting for an opponent to join...', { id: WAITING_TOAST_ID })
@@ -64,7 +74,7 @@ export function CompetitionRoom({ challenge }: Props) {
     } finally {
       findingRef.current = false
     }
-  }, [challenge.id, dismissStatusToasts])
+  }, [challenge.id, language, dismissStatusToasts])
 
   useEffect(() => {
     if (status === 'idle' && !error) {
@@ -96,11 +106,21 @@ export function CompetitionRoom({ challenge }: Props) {
       setStatus('in_progress');
       dismissStatusToasts();
       toast.success('Opponent found! The match has started.');
+      
+      const opponentId = data.match.playerOneId === userId 
+        ? data.match.playerTwoId 
+        : data.match.playerOneId;
+      // @ts-ignore
+      const oppLang = data.match.playerOneId === opponentId 
+        ? data.match.playerOneLanguage 
+        : data.match.playerTwoLanguage;
+      setOpponentLanguage(oppLang);
     });
 
-    channel.bind('opponent-progress', (data: { senderId: string, codeLength: number }) => {
+    channel.bind('opponent-progress', (data: { senderId: string, codeLength: number, language: string }) => {
       if (data.senderId !== userId) {
         setOpponentCodeLength(data.codeLength);
+        setOpponentLanguage(data.language); 
       }
     });
 
@@ -121,7 +141,7 @@ export function CompetitionRoom({ challenge }: Props) {
     if (value === undefined) return;
     setCode(value);
     if (match && status === 'in_progress') {
-      sendProgressUpdate(match.id, value);
+      sendProgressUpdate(match.id, value, language); 
     }
   }
 
@@ -129,7 +149,7 @@ export function CompetitionRoom({ challenge }: Props) {
     if (!match) return;
     startSubmission(() => {
       toast.loading('Submitting and testing your solution...', { id: SUBMISSION_TOAST_ID });
-      submitP2PChallenge(match.id, code, 'javascript') // TODO: Remove the hardcoded language
+      submitP2PChallenge(match.id, code, language)
         .then((res:any) => {
           toast.dismiss(SUBMISSION_TOAST_ID);
           if (res?.error) {
@@ -177,10 +197,20 @@ export function CompetitionRoom({ challenge }: Props) {
      return (
       <div className="text-center p-10">
         <div className="text-4xl font-bold mb-4">
-          {winnerId === userId ? '脂 You Won! 脂' : '丼 You Lost 丼'}
+          {winnerId === userId ? '🏆 You Won! 🏆' : '😔 You Lost 😔'}
         </div>
-        <p>You gained 25 XP and 1 Gem!</p>
-        {/* TODO: Link back to /compete */}
+        <p className="text-lg text-muted-foreground">
+          {winnerId === userId 
+            ? "You gained 25 XP and 1 Gem!" 
+            : "Better luck next time!"}
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push('/compete')}
+          className={cn(buttonVariants({ variant: 'primary' }), 'mt-6')}
+        >
+          Find Another Match
+        </button>
       </div>
      )
   }
@@ -189,20 +219,24 @@ export function CompetitionRoom({ challenge }: Props) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-card border rounded-lg p-4">
         <h2 className="text-xl font-semibold mb-2">Problem</h2>
-        {/* TODO: Use a markdown renderer for challenge.problemDescription */}
-        <p className="text-muted-foreground">{challenge.problemDescription}</p>
+        <p className="text-muted-foreground whitespace-pre-wrap">
+          {challenge.problemDescription}
+        </p>
       </div>
 
       <div className="space-y-4">
         <div className="bg-card border rounded-lg p-4">
             <h3 className="text-lg font-semibold">Opponent Status</h3>
+            <p className="text-sm text-muted-foreground">
+              {opponentLanguage ? `Coding in ${opponentLanguage}` : "Connecting..."}
+            </p>
             <p className="text-sm text-muted-foreground">Progress: {opponentCodeLength} characters</p>
         </div>
 
         <div className="h-[400px] border rounded-lg overflow-hidden">
           <Editor
             height="400px"
-            language="javascript"
+            language={language}
             theme={document.documentElement.classList.contains('dark') ? 'vs-dark' : 'light'}
             value={code}
             onChange={handleCodeChange}
