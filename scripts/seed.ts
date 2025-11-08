@@ -1,3 +1,4 @@
+
 import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
 
@@ -43,6 +44,7 @@ const main = async () => {
         title: 'Java',
         altCode: 'java',
       },
+      
     ])
 
     await db.insert(schema.units).values([
@@ -68,6 +70,7 @@ const main = async () => {
         courseId: 1,
         order: 3,
       },
+      
       // JavaScript Units
       {
         id: 4,
@@ -404,6 +407,13 @@ const main = async () => {
         order: 2,
         question: 'Can an interface have constructors?',
       },
+      {
+        id: 17,
+        lessonId: 23,
+        type: 'CODE',
+        order: 1,
+        question: 'Can an interface have constructors?',
+      }
     ])
 
     await db.insert(schema.challengeOptions).values([

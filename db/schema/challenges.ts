@@ -1,10 +1,10 @@
-import { pgTable, serial, text, integer, pgEnum, boolean } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+import { pgTable, serial, text, integer, pgEnum, boolean, jsonb } from 'drizzle-orm/pg-core'
+import { relations, sql } from 'drizzle-orm'
 
 import { lessons } from '@/db/schema/lessons'
 import { challengeProgress } from '@/db/schema/challengeProgress'
 
-export const challengesEnum = pgEnum('type', ['SELECT', 'HINT'])
+export const challengesEnum = pgEnum('type', ['SELECT', 'HINT', 'CODE']);
 
 export const challenges = pgTable('challenges', {
   id: serial('id').primaryKey(),
@@ -14,7 +14,13 @@ export const challenges = pgTable('challenges', {
     .references(() => lessons.id, { onDelete: 'cascade' })
     .notNull(),
   order: integer('order').notNull(),
-})
+  problemDescription: text('problem_description'),
+  testCases: jsonb('test_cases').default(sql`'[]'::jsonb`),
+  stubCodePy: text('stub_code_py'),
+  stubCodeJs: text('stub_code_js'),
+  stubCodeJava: text('stub_code_java'),
+  stubCodeCpp: text('stub_code_cpp'),
+});
 
 export const challengeOptions = pgTable('challenge_options', {
   id: serial('id').primaryKey(),
