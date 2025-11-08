@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 type SideMenuItemProps = {
   label: string
   icon: string
-  href: Route
+  href: Route | string
   hideLabel?: boolean
 }
 
@@ -23,7 +23,7 @@ export function SideMenuItem({ href, icon, label, hideLabel }: SideMenuItemProps
         className={`h-auto w-full justify-start py-2 sm:max-lg:w-auto sm:max-lg:px-2 ${isActive ? 'border-b-2' : 'text-foreground/85'}`}
         asChild
       >
-        <NextLink href={href} title={label} {...(hideLabel && { 'aria-label': label })}>
+        <NextLink href={href as Route} title={label} {...(hideLabel && { 'aria-label': label })}>
           <span className="relative block size-10">
             <NextImage
               className="object-cover"
