@@ -26,7 +26,7 @@ type ShopItemCardProps = {
   bytes: number
 }
 
-export async function ShopItemCard({ item, hearts, points, gems, bytes }: ShopItemCardProps) {
+export function ShopItemCard({ item, hearts, points, gems, bytes }: ShopItemCardProps) {
   const [isPending, startTransition] = useTransition()
   const [isLoading, setIsLoading] = useState(false)
 
