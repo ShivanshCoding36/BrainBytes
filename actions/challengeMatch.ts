@@ -126,7 +126,7 @@ export async function submitP2PChallenge(matchId: number, code: string, language
 
     try {
         for (const testCase of testCases) {
-            const response = await fetch(`https://${process.env.NEXT_PUBLIC_JUDGE0_HOST}/api/v1/submissions?base64_encoded=false&wait=true`, {
+            const response = await fetch(`https://${process.env.NEXT_PUBLIC_JUDGE0_HOST}/submissions?base64_encoded=false&wait=true`, {
                 method: 'POST',
                 headers: {
                     'x-rapidapi-key': process.env.JUDGE0_API_KEY!,
