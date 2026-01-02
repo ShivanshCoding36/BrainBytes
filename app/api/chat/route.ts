@@ -31,21 +31,150 @@ Always be cheerful and encouraging!
 Here is the question below:\n
 `;
 
+function extractTextFromMessage(first: any): string | undefined {
+  // Defensive: ensure we have an object
+  if (!first || typeof first !== 'object') return undefined
+
+  // Handle `parts` arrays (common in some AI SDK payloads)
+  if (Array.isArray(first.parts) && first.parts.length > 0) {
+    const partsText = first.parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
+    if (partsText) return partsText
+  }
+
+  // Handle `content` as string
+  if (typeof first.content === 'string' && first.content.trim()) {
+    return first.content.trim()
+  }
+
+  // Handle `content` as array (strings or objects)
+  if (Array.isArray(first.content) && first.content.length > 0) {
+    const contentText = first.content
+      .map((c: any) => {
+        if (typeof c === 'string') return c
+        if (typeof c?.text === 'string') return c.text
+        if (Array.isArray(c?.parts)) return c.parts.map((pp: any) => (typeof pp?.text === 'string' ? pp.text : '')).join('\n')
+        return ''
+      })
+      .join('\n')
+      .trim()
+    if (contentText) return contentText
+  }
+
+  // Legacy `text` field
+  if (typeof first.text === 'string' && first.text.trim()) {
+    return first.text.trim()
+  }
+
+  return undefined
+}
+
+function isValidMessage(first: any): boolean {
+  if (!first || typeof first !== 'object') return false
+
+  if (Array.isArray(first.parts) && first.parts.some((p: any) => typeof p?.text === 'string' && p.text.trim())) return true
+
+  if (typeof first.content === 'string' && first.content.trim()) return true
+
+  if (
+    Array.isArray(first.content) &&
+    first.content.some((c: any) =>
+      typeof c === 'string' || typeof c?.text === 'string' || (Array.isArray(c?.parts) && c.parts.some((pp: any) => typeof pp?.text === 'string'))
+    )
+  )
+    return true
+
+  if (typeof first.text === 'string' && first.text.trim()) return true
+
+  return false
+}
+
+function extractTextFromCandidate(candidate: any): string {
+  if (!candidate) return ''
+
+  if (Array.isArray(candidate.content?.parts)) {
+    return candidate.content.parts.map((p: any) => p.text ?? '').join('\n')
+  }
+
+  if (typeof candidate.content === 'string') {
+    return candidate.content
+  }
+
+  if (Array.isArray(candidate.content)) {
+    return candidate.content.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('\n')
+  }
+
+  if (typeof candidate.content?.parts?.[0]?.text === 'string') {
+    return candidate.content.parts[0].text
+  }
+
+  if (typeof candidate.content?.[0]?.text === 'string') {
+    return candidate.content[0].text
+  }
+
+  return ''
+}
+
 export async function POST(req: Request) {
   // Require authentication before processing chat requests
   // This prevents unauthorized API usage and enables rate limiting per user
-  const user = await requireUser()
+  await requireUser()
 
-  const { messages } = await req.json();
-  console.log("Messages:", messages[0].parts[0].text);
+  // Parse and validate incoming JSON
+  let body: any
+  try {
+    body = await req.json()
+  } catch (err) {
+    console.error('[chat] Invalid JSON payload:', err)
+    return new NextResponse('Invalid JSON payload', { status: 400 })
+  }
 
-  const result = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: systemPrompt + messages[0].parts[0].text,
-  });
+  const messages = body?.messages
 
-  const textResult = result.candidates![0].content?.parts![0].text;
-  console.log("Result:", textResult);
+  if (!Array.isArray(messages) || messages.length === 0) {
+    console.warn('[chat] Missing or invalid "messages" array')
+    return new NextResponse('Invalid messages: expected non-empty array', { status: 400 })
+  }
 
-  return new NextResponse(textResult);
+  const first = messages[0]
+
+  // Validate message structure before attempting to extract text
+  if (!isValidMessage(first)) {
+    console.warn('[chat] Invalid message structure', { sample: first })
+    return new NextResponse('Invalid message structure', { status: 400 })
+  }
+
+  const userText = extractTextFromMessage(first)
+
+  if (!userText) {
+    console.warn('[chat] No message text found in the provided message structure')
+    return new NextResponse('No message text found', { status: 400 })
+  }
+
+  console.log('Messages text:', userText)
+
+  // Call the AI model
+  let result: any
+  try {
+    result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: systemPrompt + userText,
+    })
+  } catch (err) {
+    console.error('[chat] AI generation failed:', err)
+    return new NextResponse('AI generation failed', { status: 500 })
+  }
+
+  // Safely extract the text from the response
+  let textResult = ''
+  if (Array.isArray(result?.candidates) && result.candidates.length > 0) {
+    textResult = extractTextFromCandidate(result.candidates[0])
+  } else if (result?.candidate) {
+    textResult = extractTextFromCandidate(result.candidate)
+  } else if (typeof result?.content === 'string') {
+    textResult = result.content
+  }
+
+  console.log('Result:', textResult)
+
+  return new NextResponse(textResult)
 }
