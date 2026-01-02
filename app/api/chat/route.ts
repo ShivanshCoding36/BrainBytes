@@ -143,7 +143,10 @@ export async function POST(req: Request) {
   // Validate message structure before attempting to extract text
   if (!isValidMessage(userMessage)) {
     console.warn('[chat] Invalid message structure', { sample: userMessage })
-    return new NextResponse('Invalid message structure', { status: 400 })
+    return new NextResponse(
+      "Invalid message structure: message must include text content in a supported field such as 'content', 'text', or 'parts'",
+      { status: 400 },
+    )
   }
 
   const userText = extractTextFromMessage(userMessage)
