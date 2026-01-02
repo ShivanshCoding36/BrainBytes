@@ -174,6 +174,11 @@ export async function POST(req: Request) {
     textResult = result.content
   }
 
+  // If we could not extract any usable text, treat this as an upstream AI error
+  if (!textResult || !textResult.trim()) {
+    console.error('[chat] AI returned an empty or invalid response text')
+    return new NextResponse('AI returned an empty response', { status: 502 })
+  }
   console.log('Result:', textResult)
 
   return new NextResponse(textResult)
