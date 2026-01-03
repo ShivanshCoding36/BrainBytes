@@ -3,8 +3,23 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth0";
 import { resolveUserTier, checkRateLimit } from '@/lib/rateLimit'
 
-const ai = new GoogleGenAI({});
+const ai: GoogleGenAI = (() => {
+  if (!process.env.GOOGLE_GENAI_API_KEY) {
+    // Allow build to pass without API key
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('GOOGLE_GENAI_API_KEY is not set');
+    }
+    // Return a dummy instance or handle it gracefully
+    // For build purposes, we can just return a dummy object casted as GoogleGenAI
+    // or better, just use a mock key if we are just building
+    return new GoogleGenAI({ apiKey: "mock-key-for-build" });
+  }
+  return new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
+})();
 
+function getAI() {
+  return ai;
+}
 export const maxDuration = 30;
 
 const systemPrompt = `
@@ -193,7 +208,7 @@ export async function POST(req: Request) {
   // Call the AI model
   let result: any
   try {
-    result = await ai.models.generateContent({
+    result = await getAI().models.generateContent({
       model: 'gemini-2.5-flash',
       contents: systemPrompt + userText,
     })
