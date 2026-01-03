@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth0";
+import { resolveUserTier, checkRateLimit } from '@/lib/rateLimit'
 
 const ai = new GoogleGenAI({});
 
@@ -31,24 +32,24 @@ Always be cheerful and encouraging!
 Here is the question below:\n
 `;
 
-function extractTextFromMessage(first: any): string | undefined {
+function extractTextFromMessage(message: any): string | undefined {
   // Defensive: ensure we have an object
-  if (!first || typeof first !== 'object') return undefined
+  if (!message || typeof message !== 'object') return undefined
 
   // Handle `parts` arrays (common in some AI SDK payloads)
-  if (Array.isArray(first.parts) && first.parts.length > 0) {
-    const partsText = first.parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
+  if (Array.isArray(message.parts) && message.parts.length > 0) {
+    const partsText = message.parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
     if (partsText) return partsText
   }
 
   // Handle `content` as string
-  if (typeof first.content === 'string' && first.content.trim()) {
-    return first.content.trim()
+  if (typeof message.content === 'string' && message.content.trim()) {
+    return message.content.trim()
   }
 
   // Handle `content` as array (strings or objects)
-  if (Array.isArray(first.content) && first.content.length > 0) {
-    const contentText = first.content
+  if (Array.isArray(message.content) && message.content.length > 0) {
+    const contentText = message.content
       .map((c: any) => {
         if (typeof c === 'string') return c
         if (typeof c?.text === 'string') return c.text
@@ -61,8 +62,8 @@ function extractTextFromMessage(first: any): string | undefined {
   }
 
   // Legacy `text` field
-  if (typeof first.text === 'string' && first.text.trim()) {
-    return first.text.trim()
+  if (typeof message.text === 'string' && message.text.trim()) {
+    return message.text.trim()
   }
 
   return undefined
@@ -71,18 +72,24 @@ function extractTextFromMessage(first: any): string | undefined {
 function isValidMessage(message: any): boolean {
   if (!message || typeof message !== 'object') return false
 
+  // `parts` must contain at least one non-empty trimmed text
   if (Array.isArray(message.parts) && message.parts.some((p: any) => typeof p?.text === 'string' && p.text.trim())) return true
 
+  // `content` can be a non-empty string
   if (typeof message.content === 'string' && message.content.trim()) return true
 
+  // `content` can be an array of strings or objects with non-empty text/parts
   if (
     Array.isArray(message.content) &&
     message.content.some((c: any) =>
-      typeof c === 'string' || typeof c?.text === 'string' || (Array.isArray(c?.parts) && c.parts.some((pp: any) => typeof pp?.text === 'string'))
+      (typeof c === 'string' && c.trim()) ||
+      (typeof c?.text === 'string' && c.text.trim()) ||
+      (Array.isArray(c?.parts) && c.parts.some((pp: any) => typeof pp?.text === 'string' && pp.text.trim()))
     )
   )
     return true
 
+  // legacy `text` must be non-empty
   if (typeof message.text === 'string' && message.text.trim()) return true
 
   return false
@@ -116,8 +123,8 @@ function extractTextFromCandidate(candidate: any): string {
 
 export async function POST(req: Request) {
   // Require authentication before processing chat requests
-  // This prevents unauthorized API usage and enables rate limiting per user
-  await requireUser()
+  // This enables per-user rate limiting and audit logging
+  const user = await requireUser()
 
   // Parse and validate incoming JSON
   let body: any
@@ -135,13 +142,14 @@ export async function POST(req: Request) {
     return new NextResponse('Invalid messages: expected non-empty array', { status: 400 })
   }
 
+  // Note: only the first message is processed by this endpoint
   const userMessage = messages[0]
 
   // Validate message structure before attempting to extract text
   if (!isValidMessage(userMessage)) {
-    console.warn('[chat] Invalid message structure', { sample: userMessage })
+    console.warn('[chat] Invalid message structure')
     return new NextResponse(
-      "Invalid message structure: message must include text content in a supported field such as 'content', 'text', or 'parts'",
+      "Invalid message structure: message must include non-empty text in 'content', 'text', or 'parts'",
       { status: 400 },
     )
   }
@@ -149,11 +157,38 @@ export async function POST(req: Request) {
   const userText = extractTextFromMessage(userMessage)
 
   if (!userText) {
-    console.warn('[chat] No message text found in the provided message structure')
+    console.warn('[chat] Invalid message: contains no non-empty text content')
     return new NextResponse('Invalid message: contains no non-empty text content', { status: 400 })
   }
 
-  console.log('Messages text:', userText)
+  // Rate limiting: determine tier and enforce limits
+  let rlLimit = 5
+  try {
+    const { tier, limit } = await resolveUserTier(user)
+    rlLimit = limit
+    const rl = await checkRateLimit(user.id, rlLimit)
+    // Attach rate limit headers on responses
+    if (!rl.allowed) {
+      return new NextResponse('Too Many Requests', {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': String(rlLimit),
+          'X-RateLimit-Remaining': String(rl.remaining),
+        },
+      })
+    }
+
+    // Attach rate limit headers for successful attempt (will be returned later)
+    // We'll include these headers on the final response below by capturing rl
+    ;(user as any)._rateLimit = rl
+    ;(user as any)._rateLimitLimit = rlLimit
+  } catch (err) {
+    console.error('[chat] Rate limit check failed:', err)
+    // Continue without rate limiting on unexpected errors but log it
+  }
+
+  // Log metadata only (avoid logging user-provided text)
+  console.log('[chat] Processing message', { userId: user?.id ?? 'unknown' })
 
   // Call the AI model
   let result: any
@@ -162,32 +197,19 @@ export async function POST(req: Request) {
       model: 'gemini-2.5-flash',
       contents: systemPrompt + userText,
     })
-  } catch (err: unknown) {
+  } catch (err: any) {
     console.error('[chat] AI generation failed:', err)
 
-    let userMessage = 'AI generation failed due to an internal error. Please try again.'
-
-    if (err && typeof err === 'object') {
-      const anyErr = err as any
-      const statusCode = anyErr.status ?? anyErr.statusCode
-      const errorMessage = typeof anyErr.message === 'string' ? anyErr.message : ''
-
-      if (statusCode === 429) {
-        userMessage =
-          'AI generation failed because the rate limit was exceeded. Please wait a moment and try again.'
-      } else if (typeof statusCode === 'number' && statusCode >= 500) {
-        userMessage =
-          'AI generation failed because the AI service is temporarily unavailable. Please try again later.'
-      } else if (typeof statusCode === 'number' && statusCode >= 400) {
-        userMessage =
-          'AI generation failed due to invalid input to the AI service. Please check your request and try again.'
-      } else if (errorMessage.toLowerCase().includes('timeout')) {
-        userMessage =
-          'AI generation failed because the request to the AI service timed out. Please try again.'
-      }
+    const statusCode = err?.status ?? err?.statusCode
+    if (statusCode === 429) {
+      return new NextResponse('AI generation rate-limited, please retry shortly', { status: 429 })
     }
 
-    return new NextResponse(userMessage, { status: 500 })
+    if (typeof statusCode === 'number' && statusCode >= 500) {
+      return new NextResponse('AI service unavailable, please try again later', { status: 502 })
+    }
+
+    return new NextResponse('AI generation failed', { status: 500 })
   }
 
   // Safely extract the text from the response
@@ -200,12 +222,19 @@ export async function POST(req: Request) {
     textResult = result.content
   }
 
-  // If we could not extract any usable text, treat this as an upstream AI error
   if (!textResult || !textResult.trim()) {
-    console.error('[chat] AI returned an empty or invalid response text')
+    console.error('[chat] AI returned empty response')
     return new NextResponse('AI returned an empty response', { status: 502 })
   }
-  console.log('Result:', textResult)
 
-  return new NextResponse(textResult)
+  // Log response metadata (avoid logging content)
+  console.log('[chat] Responding with generated text (length)', { length: textResult.length })
+
+  const rateLimitInfo = (user as any)._rateLimit
+  const rateLimitLimit = (user as any)._rateLimitLimit
+  const headers: Record<string,string> = {}
+  if (typeof rateLimitLimit === 'number') headers['X-RateLimit-Limit'] = String(rateLimitLimit)
+  if (rateLimitInfo) headers['X-RateLimit-Remaining'] = String(rateLimitInfo.remaining)
+
+  return new NextResponse(textResult, { headers })
 }

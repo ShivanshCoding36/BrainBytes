@@ -15,7 +15,8 @@
     "db:studio": "pnpm env:load pnpm drizzle-kit studio",
     "db:push": "pnpm env:load pnpm drizzle-kit push",
     "db:seed": "pnpm env:load pnpm tsx ./scripts/seed.ts",
-    "db:update-users": "pnpm env:load pnpm tsx ./scripts/update-user-data.ts"
+    "db:update-users": "pnpm env:load pnpm tsx ./scripts/update-user-data.ts",
+    "test": "vitest"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.29",
@@ -101,6 +102,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.11.0",
     "typechain": "^8.3.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^1.2.1"
   }
 }
