@@ -277,7 +277,7 @@ export function CompetitionRoom({ challenge, language, initialCode }: Props) {
 
         <div className="h-[300px] md:h-[400px] border rounded-lg overflow-hidden">
           <Editor
-            height="300px"
+            height="100%"
             language={language}
             theme={document.documentElement.classList.contains('dark') ? 'vs-dark' : 'light'}
             value={code}
