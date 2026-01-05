@@ -12,8 +12,11 @@ const SUBSCRIPTION_PRICE_CENTS = parseInt(
   10
 );
 const SUBSCRIPTION_CURRENCY = process.env.STRIPE_SUBSCRIPTION_CURRENCY ?? "USD";
-const SUBSCRIPTION_INTERVAL =
-  (process.env.STRIPE_SUBSCRIPTION_INTERVAL as "month" | "year") ?? "month";
+const rawSubscriptionInterval = process.env.STRIPE_SUBSCRIPTION_INTERVAL;
+const SUBSCRIPTION_INTERVAL: "month" | "year" =
+  rawSubscriptionInterval === "month" || rawSubscriptionInterval === "year"
+    ? rawSubscriptionInterval
+    : "month";
 
 export const createStripeUrl = async () => {
   const user = await requireUser();
