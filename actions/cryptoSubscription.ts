@@ -109,6 +109,11 @@ export const createCryptoSubscription = async (txHash: string) => {
     return { success: true, message: "Crypto subscription activated successfully!" };
   } catch (error) {
     console.error("Error creating crypto subscription:", error);
-    throw new Error("Failed to create crypto subscription");
+
+    if (error instanceof Error) {
+      throw new Error(`Failed to create crypto subscription: ${error.message}`);
+    }
+
+    throw new Error("Failed to create crypto subscription: Unknown error");
   }
 };
