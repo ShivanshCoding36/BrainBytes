@@ -16,10 +16,9 @@ const SUBSCRIPTION_COST_BYTE = 20000
 interface SubscriptionCardProps {
   isActive: boolean
   isCryptoSubscription: boolean
-  subscriptionType: 'stripe' | 'crypto'
 }
 
-export function SubscriptionCard({ isActive, isCryptoSubscription, subscriptionType }: SubscriptionCardProps) {
+export function SubscriptionCard({ isActive, isCryptoSubscription }: SubscriptionCardProps) {
   const [isPending, startTransition] = useTransition()
   const [isLoading, setIsLoading] = useState(false)
 
