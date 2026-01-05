@@ -16,7 +16,7 @@ export const createStripeUrl = async () => {
 
   const userSubscription = await getUserSubscription();
 
-  if (userSubscription && userSubscription.stripeCustomerId) {
+  if (userSubscription && userSubscription.stripeCustomerId && !userSubscription.isCryptoSubscription) {
     const stripeSession = await stripe.billingPortal.sessions.create({
       customer: userSubscription.stripeCustomerId,
       return_url: returnUrl,
@@ -28,14 +28,14 @@ export const createStripeUrl = async () => {
   const stripeSession = await stripe.checkout.sessions.create({
     mode: "subscription",
     payment_method_types: ["card"],
-  customer_email: user.email,
+    customer_email: user.email,
     line_items: [
       {
         price_data: {
           currency: "USD",
           product_data: {
             name: "BrainBytes Pro",
-            description: "Unlimited Hearts",
+            description: "Unlimited Hearts and Premium Benefits",
           },
           unit_amount: 2000, // $20.00
           recurring: {
@@ -53,4 +53,17 @@ export const createStripeUrl = async () => {
   });
 
   return { data: stripeSession.url };
+};
+
+export const getSubscriptionStatus = async (): Promise<{
+  isActive: boolean
+  isCryptoSubscription: boolean
+  subscriptionType: 'stripe' | 'crypto'
+}> => {
+  const userSubscription = await getUserSubscription();
+  return {
+    isActive: userSubscription?.isActive || false,
+    isCryptoSubscription: userSubscription?.isCryptoSubscription || false,
+    subscriptionType: userSubscription?.isCryptoSubscription ? 'crypto' : 'stripe',
+  };
 };
