@@ -1,17 +1,31 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { eq } from 'drizzle-orm'
 
 import { getDb } from '@/db/drizzle'
 import { userProgress } from '@/db/schema'
 import { requireUser } from '@/lib/auth0'
+import { isOriginAllowed } from '@/lib/cors'
 
 const FALLBACK_AVATAR = '/logo.svg'
 const FALLBACK_NAME = 'Learner'
 
 type UserProgressInsert = typeof userProgress.$inferInsert
 
-export async function GET() {
+/**
+ * Helper function to add CORS headers to response
+ */
+function addCorsHeaders(response: NextResponse, origin: string | null) {
+  if (origin && isOriginAllowed(origin)) {
+    response.headers.set('Access-Control-Allow-Origin', origin)
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+    response.headers.set('Access-Control-Allow-Credentials', 'true')
+  }
+  return response
+}
+
+export async function GET(request: NextRequest) {
   let user
   try {
     user = await requireUser()
@@ -23,7 +37,7 @@ export async function GET() {
     where: eq(userProgress.userId, user.id),
   })
 
-  return NextResponse.json({
+  let response = NextResponse.json({
     user: {
       id: user.id,
       name: user.name ?? FALLBACK_NAME,
@@ -32,6 +46,12 @@ export async function GET() {
     },
     progress,
   })
+
+  // Add CORS headers
+  const origin = request.headers.get('origin')
+  response = addCorsHeaders(response, origin)
+
+  return response
 }
 
 type UpdateProfileBody = {
@@ -62,27 +82,36 @@ function validateAvatarUrl(value: string | null | undefined) {
   }
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   const user = await requireUser()
 
   let payload: UpdateProfileBody
   try {
     payload = (await request.json()) as UpdateProfileBody
   } catch (error) {
-    return NextResponse.json({ error: 'Invalid JSON payload.' }, { status: 400 })
+    let response = NextResponse.json({ error: 'Invalid JSON payload.' }, { status: 400 })
+    const origin = request.headers.get('origin')
+    response = addCorsHeaders(response, origin)
+    return response
   }
 
   const rawName = typeof payload.name === 'string' ? payload.name.trim() : ''
 
   if (!rawName) {
-    return NextResponse.json({ error: 'Display name is required.' }, { status: 400 })
+    let response = NextResponse.json({ error: 'Display name is required.' }, { status: 400 })
+    const origin = request.headers.get('origin')
+    response = addCorsHeaders(response, origin)
+    return response
   }
 
   let avatarUrl: string | null | undefined
   try {
     avatarUrl = validateAvatarUrl(payload.avatarUrl as string | null | undefined)
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 400 })
+    let response = NextResponse.json({ error: (error as Error).message }, { status: 400 })
+    const origin = request.headers.get('origin')
+    response = addCorsHeaders(response, origin)
+    return response
   }
 
   const existingProgress = await getDb().query.userProgress.findFirst({
@@ -119,5 +148,8 @@ export async function PATCH(request: Request) {
     where: eq(userProgress.userId, user.id),
   })
 
-  return NextResponse.json({ success: true, progress: updatedProgress })
+  let response = NextResponse.json({ success: true, progress: updatedProgress })
+  const origin = request.headers.get('origin')
+  response = addCorsHeaders(response, origin)
+  return response
 }
