@@ -24,19 +24,18 @@ export async function GET(request: NextRequest) {
     where: eq(userProgress.userId, user.id),
   })
 
-  let response = NextResponse.json({
-    user: {
-      id: user.id,
-      name: user.name ?? FALLBACK_NAME,
-      email: user.email ?? null,
-      picture: user.picture ?? FALLBACK_AVATAR,
-    },
-    progress,
-  })
-
-  // Add CORS headers
-  const origin = request.headers.get('origin')
-  response = addCorsHeaders(response, origin)
+  const response = addCorsHeaders(
+    NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name ?? FALLBACK_NAME,
+        email: user.email ?? null,
+        picture: user.picture ?? FALLBACK_AVATAR,
+      },
+      progress,
+    }),
+    request.headers.get('origin')
+  )
 
   return response
 }
@@ -76,18 +75,20 @@ export async function PATCH(request: NextRequest) {
   try {
     payload = (await request.json()) as UpdateProfileBody
   } catch (error) {
-    let response = NextResponse.json({ error: 'Invalid JSON payload.' }, { status: 400 })
-    const origin = request.headers.get('origin')
-    response = addCorsHeaders(response, origin)
+    const response = addCorsHeaders(
+      NextResponse.json({ error: 'Invalid JSON payload.' }, { status: 400 }),
+      request.headers.get('origin')
+    )
     return response
   }
 
   const rawName = typeof payload.name === 'string' ? payload.name.trim() : ''
 
   if (!rawName) {
-    let response = NextResponse.json({ error: 'Display name is required.' }, { status: 400 })
-    const origin = request.headers.get('origin')
-    response = addCorsHeaders(response, origin)
+    const response = addCorsHeaders(
+      NextResponse.json({ error: 'Display name is required.' }, { status: 400 }),
+      request.headers.get('origin')
+    )
     return response
   }
 
@@ -95,9 +96,10 @@ export async function PATCH(request: NextRequest) {
   try {
     avatarUrl = validateAvatarUrl(payload.avatarUrl as string | null | undefined)
   } catch (error) {
-    let response = NextResponse.json({ error: (error as Error).message }, { status: 400 })
-    const origin = request.headers.get('origin')
-    response = addCorsHeaders(response, origin)
+    const response = addCorsHeaders(
+      NextResponse.json({ error: (error as Error).message }, { status: 400 }),
+      request.headers.get('origin')
+    )
     return response
   }
 
@@ -135,8 +137,9 @@ export async function PATCH(request: NextRequest) {
     where: eq(userProgress.userId, user.id),
   })
 
-  let response = NextResponse.json({ success: true, progress: updatedProgress })
-  const origin = request.headers.get('origin')
-  response = addCorsHeaders(response, origin)
+  const response = addCorsHeaders(
+    NextResponse.json({ success: true, progress: updatedProgress }),
+    request.headers.get('origin')
+  )
   return response
 }

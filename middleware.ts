@@ -35,7 +35,7 @@ function corsMiddleware(request: NextRequest) {
 // Main middleware
 const authMiddleware = withMiddlewareAuthRequired()
 
-export default function middleware(request: NextRequest) {
+export default function middleware(request: NextRequest, event: any) {
   // Apply CORS middleware first
   const corsResponse = corsMiddleware(request)
   if (corsResponse) {
@@ -43,7 +43,7 @@ export default function middleware(request: NextRequest) {
   }
 
   // Then apply auth middleware
-  return authMiddleware(request)
+  return authMiddleware(request, event)
 }
 
 export const config = {
