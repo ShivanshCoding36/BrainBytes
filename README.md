@@ -13,7 +13,7 @@
   <a href="https://brainbytes.vercel.app">Live Demo</a> • 
   <a href="./documentation/SETUP.md">Setup Guide</a> • 
   <a href="#architecture">Technical Maps</a> • 
-  <a href="./documentation/CONTRIBUTING.md">Contribute</a>
+  <a href="./CONTRIBUTING.md">Contribute</a>
 </p>
 
 <p align="center">
@@ -92,7 +92,7 @@ Simplified view of the **BrainBytes** modular architecture.
 ## 📚 Technical Deep Dives
 To make it easier for contributors, we have moved detailed specs to the `documentation/` folder:
 * **🚀 [Installation & Setup](documentation/SETUP.md) -** Get the project running locally.
-* **🔐 [Security Architecture](documentation/SECURITY.md) -** Auth0 patterns & CI/CD scanning.
+* **🔐 [Security Architecture](./SECURITY.md) -** Auth0 patterns & CI/CD scanning.
 * **📚 [Learning Curriculum](documentation/LEARNING_PATHS.md) -** Python/JS DSA path details.
 * **🔄 [CI/CD Pipelines](documentation/PIPELINES.md) -** GitHub Actions workflows.
 
@@ -101,7 +101,7 @@ To make it easier for contributors, we have moved detailed specs to the `documen
 ---
 
 ## 🤝 Contributing
-We love community help! Check our [Contributing Guide](../CONTRIBUTING.md) for **ECWOC'26** guidelines.
+We love community help! Check our [Contributing Guide](./CONTRIBUTING.md) for **ECWOC'26** guidelines.
 
 <div align="left"> <h2>💙 Contributors</h2> <img src="https://api.vaunt.dev/v1/github/entities/GauravKarakoti/repositories/BrainBytes/contributors?format=svg&limit=54" width="100%" /> </div>
 

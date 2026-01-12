@@ -25,4 +25,4 @@ All API endpoints must follow these patterns:
 - Input validation must be handled via Drizzle/Zod schemas.
 
 ---
-[⬅️ Back to README](../README.md)
+[⬅️ Back to README](./README.md)
