@@ -4,7 +4,7 @@ import { getDb } from '@/db/drizzle'
 import { challengeMatches } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { requireUser } from '@/lib/auth0'
-import { isOriginAllowed } from '@/lib/cors'
+import { isOriginAllowed, addCorsHeaders } from '@/lib/cors'
 
 let pusher: Pusher;
 
@@ -48,9 +48,10 @@ export async function POST(req: NextRequest) {
   const matchId = channel.replace('private-match-', '');
 
   if (!matchId) {
-      let response = new NextResponse('Forbidden: Invalid channel', { status: 403 })
-      const origin = req.headers.get('origin')
-      response = addCorsHeaders(response, origin)
+      const response = addCorsHeaders(
+          new NextResponse('Forbidden: Invalid channel', { status: 403 }),
+          req.headers.get('origin')
+      )
       return response
   }
 
@@ -60,15 +61,17 @@ export async function POST(req: NextRequest) {
       });
 
     if (!match || (match.playerOneId !== userId && match.playerTwoId !== userId)) {
-          let response = new NextResponse('Forbidden: Not part of match', { status: 403 })
-          const origin = req.headers.get('origin')
-          response = addCorsHeaders(response, origin)
+          const response = addCorsHeaders(
+              new NextResponse('Forbidden: Not part of match', { status: 403 }),
+              req.headers.get('origin')
+          )
           return response
       }
   } catch (e) {
-      let response = new NextResponse('Internal Server Error', { status: 500 })
-      const origin = req.headers.get('origin')
-      response = addCorsHeaders(response, origin)
+      const response = addCorsHeaders(
+          new NextResponse('Internal Server Error', { status: 500 }),
+          req.headers.get('origin')
+      )
       return response
   }
 
@@ -77,8 +80,9 @@ export async function POST(req: NextRequest) {
   }
 
   const authResponse = getPusher().authorizeChannel(socketId, channel, userData)
-  let response = NextResponse.json(authResponse)
-  const origin = req.headers.get('origin')
-  response = addCorsHeaders(response, origin)
+  const response = addCorsHeaders(
+      NextResponse.json(authResponse),
+      req.headers.get('origin')
+  )
   return response
 }
