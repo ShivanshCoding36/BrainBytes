@@ -1,45 +1,130 @@
 /**
- * CORS utility functions for validating allowed origins
+ * CORS Configuration and Utilities
+ * 
+ * Handles Cross-Origin Resource Sharing (CORS) for API endpoints
+ * to ensure only trusted domains can access our resources.
  */
 
-const ALLOWED_ORIGINS = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:3001',
-  process.env.NEXT_PUBLIC_APP_URL || 'https://brainbytes.vercel.app',
-  'https://brainbytes.vercel.app',
-]
+import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * Check if the given origin is allowed for CORS requests
- * @param origin - The origin to check (typically from request headers)
- * @returns boolean - Whether the origin is allowed
+ * Get allowed origins from environment variable or use defaults
+ * Format: comma-separated list of origins (e.g., "https://example.com,https://app.example.com")
  */
-export function isOriginAllowed(origin: string | undefined): boolean {
-  if (!origin) {
-    return false
+function getAllowedOrigins(): string[] {
+  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || ''
+  
+  const defaultOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    process.env.NEXT_PUBLIC_APP_URL,
+  ].filter(Boolean) as string[]
+
+  if (!allowedOriginsEnv) {
+    return defaultOrigins
   }
 
-  // Check against allowed origins
-  return ALLOWED_ORIGINS.some(allowedOrigin => {
-    if (!allowedOrigin) return false
-    return origin === allowedOrigin
+  return allowedOriginsEnv
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+}
+
+/**
+ * Check if an origin is allowed
+ */
+export function isOriginAllowed(origin: string | null): boolean {
+  if (!origin) return false
+  
+  const allowedOrigins = getAllowedOrigins()
+  
+  // Support wildcard domains for development
+  return allowedOrigins.some((allowed) => {
+    if (allowed === '*') return true // Only use in development
+    if (allowed.includes('*')) {
+      // Convert wildcard pattern to regex (e.g., *.example.com -> *.example.com)
+      const pattern = allowed.replace(/\*/g, '.*').replace(/\./g, '\\.')
+      return new RegExp(`^${pattern}$`).test(origin)
+    }
+    return origin === allowed
   })
 }
 
 /**
- * Get the CORS headers for a response
- * @param origin - The origin to set in the response
- * @returns object - Headers object with CORS headers
+ * CORS headers configuration
  */
-export function getCorsHeaders(origin?: string) {
-  const allowOrigin = origin && isOriginAllowed(origin) ? origin : 'http://localhost:3000'
+const CORS_HEADERS = {
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+  'Access-Control-Max-Age': '86400', // 24 hours
+  'Access-Control-Allow-Credentials': 'true',
+}
 
-  return {
-    'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Credentials': 'true',
+/**
+ * Handle preflight CORS requests
+ */
+export function handleCorsPreFlight(request: NextRequest): NextResponse | null {
+  if (request.method === 'OPTIONS') {
+    const origin = request.headers.get('origin')
+
+    if (!isOriginAllowed(origin)) {
+      return new NextResponse(null, { status: 403 })
+    }
+
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': origin || '*',
+        ...CORS_HEADERS,
+      },
+    })
   }
+
+  return null
+}
+
+/**
+ * Add CORS headers to a response
+ */
+export function addCorsHeaders<T>(
+  response: NextResponse<T>,
+  origin: string | null
+): NextResponse<T> {
+  if (origin && isOriginAllowed(origin)) {
+    response.headers.set('Access-Control-Allow-Origin', origin)
+    Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+      response.headers.set(key, value)
+    })
+  }
+
+  return response
+}
+
+/**
+ * Middleware to apply CORS headers to API responses
+ * Usage: Apply to all API routes
+ */
+export async function corsMiddleware(
+  request: NextRequest,
+  handler: (request: NextRequest) => Promise<Response> | Response
+): Promise<Response> {
+  // Handle preflight requests
+  const preFlightResponse = handleCorsPreFlight(request)
+  if (preFlightResponse) {
+    return preFlightResponse
+  }
+
+  // Process the actual request
+  const response = await handler(request)
+
+  // Add CORS headers to response
+  const origin = request.headers.get('origin')
+  if (origin && isOriginAllowed(origin)) {
+    response.headers.set('Access-Control-Allow-Origin', origin)
+    Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+      response.headers.set(key, value)
+    })
+  }
+
+  return response
 }
