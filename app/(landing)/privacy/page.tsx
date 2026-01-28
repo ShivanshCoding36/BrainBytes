@@ -1,7 +1,6 @@
 import React from "react";
 export default function PrivacyPolicy() {
   return (
-    <Layout>
       <main className="container mx-auto py-12 px-4">
         <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
 
@@ -58,6 +57,5 @@ export default function PrivacyPolicy() {
           support@brainbytes.dev
         </p>
       </main>
-    </Layout>
   );
 }
